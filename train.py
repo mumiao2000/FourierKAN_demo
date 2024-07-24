@@ -17,7 +17,7 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 # generate data
 def get_dataloader(n):
-    X = torch.rand((n, 2), dtype=torch.float32) * 2 - 1
+    X = torch.rand((n, 2), dtype=torch.float32) * 4 - 2
     Y = torch.exp(torch.sin(torch.pi * X[:, 0]) + X[:, 1] ** 2).unsqueeze(1)
     Y = (torch.sin(torch.pi * X[:, 0]) + X[:, 1] ** 2).unsqueeze(1)
     Y = Y + torch.randn_like(Y, dtype=torch.float32) * 0.01

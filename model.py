@@ -85,7 +85,7 @@ class FourierKAN(nn.Module):
                     if formula[-1] == '|': formula += 'x' + str(j + 1)
                     formula += '|'
                 # x^0, x^1, x^2, x^3, x^4
-                if operator in ['^0', '^1', '^2', '^3', '^4']:
+                if operator in ['^0', '^1', '^2', '^3']:
                     formula += str(round(params[0], 3)) + '*' + '('
                     formula += self._dfs_formula(coefficient, min_range, max_range, layer_idx + 1)
                     if formula[-1] == '(': formula += 'x' + str(j + 1)
@@ -106,7 +106,7 @@ class FourierKAN(nn.Module):
             optimizer.step(closure)
             return closure().item()
         def get_params(operator, operator_type):
-            if operator_type in ['^0', '^1', '^2', '^3', '^4', 'abs']:
+            if operator_type in ['^0', '^1', '^2', '^3', 'abs']:
                 return [operator.a.item()]
             elif operator_type in ['exp', 'ln', 'sqrt', 'tanh', 'sin']:
                 return [operator.a.item(), operator.b.item()]
@@ -115,7 +115,6 @@ class FourierKAN(nn.Module):
             '^1': basic_model.PolyModel(1),
             '^2': basic_model.PolyModel(2),
             '^3': basic_model.PolyModel(3),
-            '^4': basic_model.PolyModel(4),
             'exp': basic_model.ExpModel(),
             'ln': basic_model.LnModel(),
             'sqrt': basic_model.SqrtModel(),
