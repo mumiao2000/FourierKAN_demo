@@ -11,36 +11,27 @@ epochs = 25
 batch_size = 128
 lr = 1.2e-3
 wd = 1e-2
+l1_lambda = 1e-2
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 # generate data
-def get_dataloader(n, is_train=False):
-    eps = 1e-5
-    X = torch.rand((n, 2), dtype=torch.float32) * 2 - 1
-    Y = (torch.sin(torch.exp(X[:, 0] ** 4 * X[:, 1] ** 3) * torch.sin(torch.pi * X[:, 0] + torch.exp(X[:, 1])) + 1.2 * torch.abs(0.2 + X[:, 1])) / (1 + torch.sqrt(torch.abs(X[:, 1])))).unsqueeze(1)
+def get_dataloader(n):
+    X = torch.rand((n, 2), dtype=torch.float32)
+    Y = torch.exp(torch.sin(torch.pi * X[:, 0]) + X[:, 1] ** 2).unsqueeze(1)
+    Y = (torch.sin(torch.pi * X[:, 0]) + X[:, 1] ** 2).unsqueeze(1)
     Y = Y + torch.randn_like(Y, dtype=torch.float32) * 0.01
-    # generate X_min, X_max, Y_min, Y_max
-    if is_train:
-        global X_min, X_max, Y_min, Y_max
-        X_min = torch.min(X, dim=0, keepdim=True).values
-        X_max = torch.max(X, dim=0, keepdim=True).values
-        Y_min = torch.min(Y, dim=0, keepdim=True).values
-        Y_max = torch.max(Y, dim=0, keepdim=True).values
-    # normalization
-    X = (X - X_min) / (X_max - X_min + eps)
-    Y = (Y - Y_min) / (Y_max - Y_min + eps)
     dataset = torch.utils.data.TensorDataset(X, Y)
     dataloader = torch.utils.data.DataLoader(
         dataset, batch_size=batch_size, shuffle=True, drop_last=True, num_workers=8)
     return dataloader
 
-train_dataloader = get_dataloader(int(5e4), True)
+train_dataloader = get_dataloader(int(5e4))
 valid_dataloader = get_dataloader(int(1e3))
 test_dataloader = get_dataloader(int(1e3))
 
 # net, optimizer and criterion
-net = model.FourierKAN(2, [5, 11], 1).to(device)
+net = model.FourierKAN(2, [5], 1, grid=10).to(device)
 param_num = sum(p.numel() for p in net.parameters() if p.requires_grad)
 print('Model Param Num: ', param_num)
 criterion = nn.MSELoss().to(device)
@@ -55,7 +46,8 @@ def one_epoch(data_loader, is_train=False):
         if is_train: optimizer.zero_grad()
         output = net(X)
         rmse_loss = torch.sqrt(criterion(output, Y))
-        back_loss = rmse_loss
+        l1_norm = sum(p.abs().sum() for p in net.parameters())
+        back_loss = rmse_loss + l1_lambda * l1_norm
         if is_train: back_loss.backward()
         if is_train: optimizer.step()
         with torch.no_grad():
@@ -77,6 +69,8 @@ for i in tqdm.tqdm(range(epochs)):
     print('Valid RMSE Loss: ', valid_rmse_loss)
 print('End Training')
 
+print(net.formula())
+
 # test
 eps = 1e-5
 print('\nTesting...')
@@ -92,8 +86,8 @@ with torch.no_grad():
     for data in test_dataloader:
         X, Y = data[0].to(device), data[1].to(device)
         output = net(X)
-        tmp_real = (Y.cpu() * (Y_max - Y_min + eps) + Y_min).reshape(-1).tolist()
-        tmp_pred = (output.cpu() * (Y_max - Y_min + eps) + Y_min).reshape(-1).tolist()
+        tmp_real = Y.cpu().reshape(-1).tolist()
+        tmp_pred = output.cpu().reshape(-1).tolist()
         real = real + tmp_real
         pred = pred + tmp_pred
     real = np.array(real)
