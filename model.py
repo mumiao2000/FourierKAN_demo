@@ -3,6 +3,23 @@ import torch.nn as nn
 import torch.optim as optim
 import basic_model
 
+class MLP(nn.Module):
+    def __init__(self, in_dim:int, hidden_dim:list[int], out_dim:int):
+        super().__init__()
+        dim = [in_dim] + hidden_dim + [out_dim]
+        self.MLP_layer = [nn.Sequential(
+            nn.Linear(dim[i], dim[i + 1]),
+            nn.ReLU(),
+            nn.BatchNorm1d(dim[i + 1]),) for i in range(len(dim) - 1)]
+        self.MLP = nn.Sequential(*self.MLP_layer, nn.Sigmoid())
+
+    def forward(self, X:torch.Tensor) -> torch.Tensor:
+        Y = self.MLP(X)
+        return Y
+
+    def formula(self) -> str:
+        return 'None'
+
 def _FourierX(X:torch.Tensor, hidden_dim:int, grid=5) -> torch.Tensor:
     i_values = torch.arange(grid, dtype=X.dtype, device=X.device).reshape(grid, 1, 1)
     cos_values = torch.cos(i_values * X).permute(1, 2, 0)
@@ -84,7 +101,7 @@ class FourierKAN(nn.Module):
                     formula += self._dfs_formula(coefficient, min_range, max_range, layer_idx + 1)
                     if formula[-1] == '|': formula += 'x' + str(j + 1)
                     formula += '|'
-                # x^0, x^1, x^2, x^3, x^4
+                # x^0, x^1, x^2, x^3
                 if operator in ['^0', '^1', '^2', '^3']:
                     formula += str(round(params[0], 3)) + '*' + '('
                     formula += self._dfs_formula(coefficient, min_range, max_range, layer_idx + 1)

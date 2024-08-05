@@ -17,9 +17,9 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 # generate data
 def get_dataloader(n):
-    X = torch.rand((n, 2), dtype=torch.float32) * 4 - 2
-    Y = torch.exp(torch.sin(torch.pi * X[:, 0]) + X[:, 1] ** 2).unsqueeze(1)
-    Y = (torch.sin(torch.pi * X[:, 0]) + X[:, 1] ** 2).unsqueeze(1)
+    X = torch.rand((n, 2), dtype=torch.float32)
+    # Y = torch.exp(torch.sin(torch.pi * X[:, 0]) + X[:, 1] ** 2).unsqueeze(1)
+    Y = (torch.pi * X[:, 0] + torch.exp(X[:, 1])).unsqueeze(1)
     Y = Y + torch.randn_like(Y, dtype=torch.float32) * 0.01
     dataset = torch.utils.data.TensorDataset(X, Y)
     dataloader = torch.utils.data.DataLoader(
@@ -31,7 +31,7 @@ valid_dataloader = get_dataloader(int(1e3))
 test_dataloader = get_dataloader(int(1e3))
 
 # net, optimizer and criterion
-net = model.FourierKAN(2, [], 1, grid=10).to(device)
+net = model.FourierKAN(2, [5], 1, grid=5).to(device)
 param_num = sum(p.numel() for p in net.parameters() if p.requires_grad)
 print('Model Param Num: ', param_num)
 criterion = nn.MSELoss().to(device)
